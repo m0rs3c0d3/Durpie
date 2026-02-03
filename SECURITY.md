@@ -24,9 +24,8 @@ Durpie is designed for **authorized security testing only**.
 
 If you find a security vulnerability in Durpie's code:
 
-1. **Do not** open a public issue
-2. Email: [your-security-email]
-3. Include:
+1. Open PR
+2. Include:
    - Description of the vulnerability
    - Steps to reproduce
    - Potential impact
