@@ -1,0 +1,404 @@
+# Durpie Development Roadmap
+
+Security-focused roadmap organized by priority and complexity.
+
+## Legend
+
+- 🔴 **Critical** - Core functionality, do first
+- 🟠 **High** - Important for real-world use
+- 🟡 **Medium** - Nice to have
+- 🟢 **Low** - Future enhancements
+- ✅ **Done**
+- 🚧 **In Progress**
+- 📋 **Planned**
+
+---
+
+## Phase 1: Foundation (Current)
+
+### Core Proxy ✅
+- [x] mitmproxy integration
+- [x] HTTPS interception
+- [x] Request/response logging
+- [x] Target scoping (config.py)
+
+### Passive Scanners ✅
+- [x] SQL error detection
+- [x] XSS reflection detection
+- [x] Sensitive data scanner (API keys, emails, tokens)
+- [x] Security headers audit
+- [x] Cookie security audit
+- [x] JWT analyzer
+- [x] IDOR pattern detection
+- [x] SSRF vector detection
+
+### Payload Library ✅
+- [x] SQLi payloads with explanations
+- [x] XSS payloads with context breakouts
+- [x] SSRF payloads (localhost, cloud metadata)
+- [x] Auth payloads (defaults, common passwords)
+- [x] Path traversal payloads
+- [x] Advanced auth module (auth2.py)
+
+### Tools ✅
+- [x] Intruder (automated fuzzing)
+- [x] Decoder utility
+- [x] Response fingerprinting
+
+---
+
+## Phase 2: Active Scanning 🔴
+
+### 📋 Active SQLi Scanner
+```
+Priority: CRITICAL
+Complexity: Medium
+```
+- [ ] Parameter discovery (query, body, headers, cookies)
+- [ ] Automatic payload injection
+- [ ] Error-based detection
+- [ ] Boolean-based blind detection
+- [ ] Time-based blind detection
+- [ ] UNION column enumeration
+- [ ] Database fingerprinting (MySQL/PostgreSQL/MSSQL/SQLite)
+- [ ] Data extraction automation
+
+### 📋 Active XSS Scanner
+```
+Priority: CRITICAL  
+Complexity: Medium
+```
+- [ ] Reflection point detection
+- [ ] Context detection (HTML/attribute/script/URL)
+- [ ] Payload selection based on context
+- [ ] Filter detection and bypass attempts
+- [ ] DOM XSS detection (requires headless browser)
+- [ ] Proof-of-concept generation
+
+### 📋 SSRF Exploitation
+```
+Priority: HIGH
+Complexity: Medium
+```
+- [ ] Automatic URL parameter detection
+- [ ] Internal port scanning
+- [ ] Cloud metadata extraction
+- [ ] Protocol smuggling (gopher, dict)
+- [ ] Blind SSRF via external callback (webhook integration)
+
+---
+
+## Phase 3: Authentication & Session 🟠
+
+### 📋 Session Analysis
+```
+Priority: HIGH
+Complexity: Medium
+```
+- [ ] Session token entropy analysis
+- [ ] Session fixation detection
+- [ ] Session timeout testing
+- [ ] Concurrent session testing
+- [ ] Session invalidation on logout
+- [ ] Session invalidation on password change
+
+### 📋 OAuth/OIDC Testing
+```
+Priority: HIGH
+Complexity: High
+```
+- [ ] Redirect URI validation testing
+- [ ] State parameter validation
+- [ ] PKCE implementation check
+- [ ] Token leakage detection
+- [ ] Scope escalation testing
+- [ ] IdP confusion attacks
+
+### 📋 JWT Deep Analysis
+```
+Priority: HIGH
+Complexity: Medium
+```
+- [ ] Algorithm confusion attacks (RS256→HS256)
+- [ ] Key brute forcing (common secrets)
+- [ ] JWK injection
+- [ ] Kid parameter attacks
+- [ ] Claim manipulation testing
+- [ ] Token expiration bypass
+
+### 📋 MFA Testing
+```
+Priority: MEDIUM
+Complexity: Medium
+```
+- [ ] Backup code brute force
+- [ ] OTP bypass techniques
+- [ ] MFA fatigue simulation
+- [ ] Device trust manipulation
+- [ ] Recovery flow testing
+
+---
+
+## Phase 4: API Security 🟠
+
+### 📋 REST API Scanner
+```
+Priority: HIGH
+Complexity: Medium
+```
+- [ ] Endpoint discovery (wordlist + response analysis)
+- [ ] HTTP method testing (GET→POST→PUT→DELETE)
+- [ ] Parameter pollution testing
+- [ ] Mass assignment detection
+- [ ] Rate limit testing
+- [ ] Version testing (/v1/ vs /v2/)
+
+### 📋 GraphQL Scanner
+```
+Priority: HIGH
+Complexity: Medium
+```
+- [ ] Introspection detection
+- [ ] Schema extraction
+- [ ] Query depth attacks
+- [ ] Batch query attacks
+- [ ] Field suggestion brute force
+- [ ] Authorization bypass per field
+
+### 📋 WebSocket Testing
+```
+Priority: MEDIUM
+Complexity: High
+```
+- [ ] Message interception and modification
+- [ ] Cross-site WebSocket hijacking
+- [ ] Origin validation testing
+- [ ] Message injection
+
+---
+
+## Phase 5: Advanced Attacks 🟡
+
+### 📋 Race Condition Framework
+```
+Priority: MEDIUM
+Complexity: High
+```
+- [ ] Automatic candidate detection (financial, votes, coupons)
+- [ ] Parallel request generation
+- [ ] Timing analysis
+- [ ] Turbo intruder-style single-packet attack
+- [ ] Result comparison and anomaly detection
+
+### 📋 Business Logic Scanner
+```
+Priority: MEDIUM
+Complexity: High
+```
+- [ ] Price manipulation detection
+- [ ] Quantity manipulation
+- [ ] Workflow bypass (skip steps)
+- [ ] Negative value testing
+- [ ] Currency confusion
+- [ ] Coupon stacking
+
+### 📋 File Upload Testing
+```
+Priority: MEDIUM
+Complexity: Medium
+```
+- [ ] Extension bypass (.php.jpg, .php%00.jpg)
+- [ ] Content-Type manipulation
+- [ ] Magic byte injection
+- [ ] SVG XSS
+- [ ] XXE via file upload
+- [ ] Path traversal in filename
+- [ ] Polyglot files
+
+### 📋 Deserialization Scanner
+```
+Priority: MEDIUM
+Complexity: High
+```
+- [ ] Java serialization detection
+- [ ] PHP object injection
+- [ ] Python pickle detection
+- [ ] .NET deserialization
+- [ ] Gadget chain generation
+
+---
+
+## Phase 6: Infrastructure 🟡
+
+### 📋 Subdomain Enumeration
+```
+Priority: MEDIUM
+Complexity: Low
+```
+- [ ] DNS brute force
+- [ ] Certificate transparency logs
+- [ ] Integration with external tools (amass, subfinder)
+- [ ] Automatic scope expansion
+
+### 📋 Port Scanning
+```
+Priority: LOW
+Complexity: Low
+```
+- [ ] Internal port scan via SSRF
+- [ ] Service fingerprinting
+- [ ] Banner grabbing
+
+### 📋 CMS Detection
+```
+Priority: LOW
+Complexity: Low
+```
+- [ ] WordPress detection and version
+- [ ] Plugin enumeration
+- [ ] Drupal/Joomla/Magento detection
+- [ ] Known CVE checking
+
+---
+
+## Phase 7: Reporting & Integration 🟢
+
+### 📋 Report Generation
+```
+Priority: MEDIUM
+Complexity: Medium
+```
+- [ ] HTML report template
+- [ ] PDF export
+- [ ] Severity scoring (CVSS)
+- [ ] Remediation recommendations
+- [ ] Evidence screenshots
+- [ ] Request/response proof
+
+### 📋 External Integrations
+```
+Priority: LOW
+Complexity: Medium
+```
+- [ ] Burp Suite import/export
+- [ ] OWASP ZAP compatibility
+- [ ] Nuclei template integration
+- [ ] Webhook notifications (Slack, Discord)
+- [ ] CI/CD pipeline integration
+- [ ] JIRA/GitHub issue creation
+
+### 📋 Collaboration Features
+```
+Priority: LOW
+Complexity: High
+```
+- [ ] Project sharing
+- [ ] Finding deduplication
+- [ ] Team notes
+- [ ] Finding verification workflow
+
+---
+
+## Phase 8: UI & UX 🟢
+
+### 📋 Web Interface
+```
+Priority: LOW
+Complexity: High
+```
+- [ ] React/Vue dashboard
+- [ ] Real-time traffic view
+- [ ] Finding browser
+- [ ] Request editor (Repeater)
+- [ ] Attack configuration GUI
+- [ ] Scope management UI
+
+### 📋 CLI Improvements
+```
+Priority: MEDIUM
+Complexity: Low
+```
+- [ ] Interactive mode
+- [ ] Progress bars
+- [ ] Colored output
+- [ ] Tab completion
+- [ ] Configuration wizard
+
+---
+
+## Security Considerations
+
+### For Users
+- Always get written authorization
+- Document your scope clearly
+- Don't store credentials in config.py (use env vars)
+- Review findings before reporting (false positives)
+- Respect rate limits
+
+### For Contributors
+- No hardcoded malicious payloads that phone home
+- All external connections must be opt-in
+- Payload files should be educational, not weaponized
+- Include ethical use warnings
+- Test against intentionally vulnerable apps (DVWA, WebGoat, Juice Shop)
+
+---
+
+## Contributing
+
+### Good First Issues
+1. Add more SQLi payloads for specific databases
+2. Improve error messages
+3. Add documentation for a scanner
+4. Create test cases against DVWA
+5. Add new payload category
+
+### Intermediate
+1. Implement a new passive scanner
+2. Add response pattern to fingerprinter
+3. Create Intruder attack type
+4. Build wordlist generator
+
+### Advanced
+1. Implement active scanner
+2. Add headless browser for DOM XSS
+3. Build race condition framework
+4. Create report generator
+
+---
+
+## Testing Environments
+
+Recommended practice targets:
+- [DVWA](https://github.com/digininja/DVWA) - Damn Vulnerable Web Application
+- [WebGoat](https://owasp.org/www-project-webgoat/) - OWASP WebGoat
+- [Juice Shop](https://owasp.org/www-project-juice-shop/) - OWASP Juice Shop
+- [HackTheBox](https://www.hackthebox.com/) - CTF platform
+- [PortSwigger Web Security Academy](https://portswigger.net/web-security) - Free labs
+
+---
+
+## Version History
+
+### v2.0.0 (Current)
+- mitmproxy backend
+- Modular scanner architecture
+- Payload library with explanations
+- Smart auth testing (auth2.py)
+- Intruder fuzzing tool
+
+### v1.0.0
+- Pure Python proxy (deprecated)
+- Basic interception
+- Limited HTTPS support
+
+---
+
+## Milestones
+
+| Version | Target | Focus |
+|---------|--------|-------|
+| v2.1 | Q2 2024 | Active SQLi + XSS scanners |
+| v2.2 | Q3 2024 | API security (REST + GraphQL) |
+| v2.3 | Q4 2024 | Session/Auth deep testing |
+| v3.0 | 2025 | Web UI + Collaboration |
