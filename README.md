@@ -17,7 +17,7 @@ Unauthorized access to computer systems is illegal. This tool is for:
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/durpie.git
+git clone https://github.com/m0rs3c0d3/durpie.git
 cd durpie
 pip install mitmproxy aiohttp
 ```
