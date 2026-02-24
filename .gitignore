@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Durpie output files
+durpie_output/
+durpie_active_findings_*.json
+smart_log.json
+race_test_*.py
+
+# Credentials / secrets (never commit these)
+.env
+*.key
+*.pem
+secrets.py
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

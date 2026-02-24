@@ -6,10 +6,30 @@ Durpie v2 - Standalone Addons
 Individual mitmproxy addons for specific testing scenarios.
 Load only what you need for focused testing.
 
+Phase 1 addons (passive / advisory):
+    - ActiveSQLiScanner  : Basic SQLi tester (advisory only; see active_scanners.py for full)
+    - CredentialStuffer  : Test leaked credentials against login endpoints
+    - IDORTester         : IDOR detection and guidance
+    - SessionAnalyzer    : Session management security analysis
+    - GraphQLScanner     : GraphQL endpoint detection and introspection testing
+    - RaceConditionTester: Race condition candidate detection + test script generation
+    - SmartLogger        : Filtered request logging (excludes static assets)
+    - WAFBypassTester    : WAF detection and bypass suggestions
+
+Phase 2 addons (active scanning) are in active_scanners.py:
+    - ActiveSQLiScanner  : Error-based, boolean-blind, time-based, UNION SQLi
+    - ActiveXSSScanner   : Context-aware XSS with PoC generation
+    - SSRFExploiter      : Cloud metadata, internal port scanning, protocol smuggling
+
 Usage:
-    mitmdump -s addons/sqli_scanner.py
-    mitmdump -s addons/auth_tester.py
-    mitmdump -s "addons/tamperer.py --rules rules.json"
+    # Passive addons only
+    mitmdump -s addons.py
+
+    # Active scanning (Phase 2)
+    mitmdump -s active_scanners.py
+
+    # Both passive and active
+    mitmdump -s addons.py -s active_scanners.py
 """
 
 import re
@@ -750,17 +770,26 @@ if __name__ == "__main__":
 Durpie v2 - Standalone Addons
 =============================
 
-Available addons:
-  - ActiveSQLiScanner  : Active SQL injection testing
-  - CredentialStuffer  : Test leaked credentials
+Phase 1 (Passive) Addons - this file:
   - IDORTester         : IDOR vulnerability detection
   - SessionAnalyzer    : Session security analysis
   - GraphQLScanner     : GraphQL endpoint testing
   - RaceConditionTester: Race condition detection
   - SmartLogger        : Filtered request logging
   - WAFBypassTester    : WAF detection and bypass
+  - CredentialStuffer  : Test leaked credentials (disabled by default)
+  - ActiveSQLiScanner  : Advisory SQLi notices (no active probing here)
+
+Phase 2 (Active) Addons - active_scanners.py:
+  - ActiveSQLiScanner  : Full SQLi scanner (error/boolean/time-based/UNION)
+  - ActiveXSSScanner   : Context-aware XSS with PoC generation
+  - SSRFExploiter      : Cloud metadata, port scan, protocol smuggling
 
 Usage:
-  mitmdump -s addons.py                    # Load all
-  mitmdump -s "addons.py:IDORTester"       # Load specific addon
+  mitmdump -s addons.py                     # Passive addons only
+  mitmdump -s active_scanners.py            # Active scanning (Phase 2)
+  mitmdump -s addons.py -s active_scanners.py  # Both
+
+Standalone active scan:
+  python active_scanners.py https://target.com/page?id=1
     """)
