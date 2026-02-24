@@ -144,41 +144,46 @@ Complexity: Medium
 
 ---
 
-## Phase 4: API Security 🟠
+## Phase 4: API Security ✅
 
-### 📋 REST API Scanner
+> Implemented in `api_testing.py` — load with `mitmdump -s api_testing.py`
+> Standalone: `python api_testing.py rest https://api.target.com/v1/users`
+
+### ✅ REST API Scanner
 ```
 Priority: HIGH
 Complexity: Medium
 ```
-- [ ] Endpoint discovery (wordlist + response analysis)
-- [ ] HTTP method testing (GET→POST→PUT→DELETE)
-- [ ] Parameter pollution testing
-- [ ] Mass assignment detection
-- [ ] Rate limit testing
-- [ ] Version testing (/v1/ vs /v2/)
+- [x] Endpoint discovery (80+ path wordlist, sensitivity-aware severity)
+- [x] HTTP method testing (GET/POST/PUT/PATCH/DELETE/OPTIONS/HEAD/TRACE)
+- [x] HTTP Parameter Pollution (HPP) — duplicate param response diff
+- [x] Mass assignment (18 privilege fields injected, response comparison)
+- [x] Rate limit testing (30-request burst, 429 detection)
+- [x] Version testing (/v1/ vs /v2/ vs /api/v1/ — 8 prefixes)
 
-### 📋 GraphQL Scanner
+### ✅ GraphQL Scanner
 ```
 Priority: HIGH
 Complexity: Medium
 ```
-- [ ] Introspection detection
-- [ ] Schema extraction
-- [ ] Query depth attacks
-- [ ] Batch query attacks
-- [ ] Field suggestion brute force
-- [ ] Authorization bypass per field
+- [x] Introspection detection (probe + full schema extraction)
+- [x] Schema extraction (all types, fields, mutations, directives)
+- [x] Query depth DoS (incremental depth 5/10/15, error pattern detection)
+- [x] Batch query attacks (array batching + alias batching)
+- [x] Field suggestion brute force ("Did you mean?" error leakage)
+- [x] Authorization bypass per field (31 sensitive field probes)
 
-### 📋 WebSocket Testing
+### ✅ WebSocket Testing
 ```
 Priority: MEDIUM
 Complexity: High
 ```
-- [ ] Message interception and modification
-- [ ] Cross-site WebSocket hijacking
-- [ ] Origin validation testing
-- [ ] Message injection
+- [x] Message interception and injection payload generation
+- [x] Cross-site WebSocket hijacking (CSWSH PoC HTML generation)
+- [x] Origin validation testing (mismatch detection)
+- [x] Message injection (XSS, SQLi, SSTI, path traversal, prototype pollution)
+- [x] Sub-protocol confusion detection
+- [x] Missing authentication on upgrade detection
 
 ---
 
