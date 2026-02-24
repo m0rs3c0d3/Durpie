@@ -417,31 +417,45 @@ class GraphQLScanner:
             self.graphql_endpoints.add(flow.request.pretty_url)
             ctx.log.info(f"[GraphQL] Detected endpoint: {flow.request.pretty_url}")
     
+    @staticmethod
+    def _has_introspection(data) -> bool:
+        """Check if a parsed GraphQL response contains introspection schema data."""
+        if not isinstance(data, dict):
+            return False
+        # Top-level __schema (raw introspection response)
+        if '__schema' in data:
+            return True
+        # Nested under 'data' key (standard GraphQL envelope)
+        data_field = data.get('data')
+        if isinstance(data_field, dict) and '__schema' in data_field:
+            return True
+        return False
+
     def response(self, flow: http.HTTPFlow):
         """Analyze GraphQL responses"""
         if flow.request.pretty_url not in self.graphql_endpoints:
             return
-        
+
         if not flow.response:
             return
-        
+
         try:
             data = json.loads(flow.response.get_text())
-        except:
+        except Exception:
             return
-        
-        # Check if introspection is enabled
-        if '__schema' in str(data):
+
+        # Check if introspection is enabled (inspect parsed structure, not raw string)
+        if self._has_introspection(data):
             self.findings.append({
                 'type': 'GraphQL Introspection Enabled',
                 'severity': 'MEDIUM',
                 'url': flow.request.pretty_url,
-                'detail': 'Full schema can be extracted',
+                'detail': 'Full schema can be extracted via introspection',
             })
             ctx.log.warn(f"[GraphQL] Introspection ENABLED at {flow.request.pretty_url}")
-        
+
         # Check for detailed errors
-        if 'errors' in data:
+        if isinstance(data, dict) and 'errors' in data:
             for error in data.get('errors', []):
                 if 'stack' in str(error).lower() or 'trace' in str(error).lower():
                     self.findings.append({

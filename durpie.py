@@ -23,6 +23,8 @@ Usage:
 
 import re
 import json
+import sys
+import time
 import base64
 import hashlib
 import urllib.parse
@@ -34,6 +36,8 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 from pathlib import Path
 import logging
+
+logger = logging.getLogger(__name__)
 
 # mitmproxy imports
 try:
@@ -78,11 +82,17 @@ class Decoder:
     
     @staticmethod
     def base64_decode(text: str) -> str:
-        # Handle padding
-        padding = 4 - len(text) % 4
-        if padding != 4:
-            text += "=" * padding
-        return base64.b64decode(text).decode()
+        """Decode base64 string, returning empty string on invalid input."""
+        try:
+            # Handle URL-safe base64 and standard base64
+            text = text.replace('-', '+').replace('_', '/')
+            # Handle padding
+            padding = 4 - len(text) % 4
+            if padding != 4:
+                text += "=" * padding
+            return base64.b64decode(text).decode('utf-8', errors='replace')
+        except Exception:
+            return ""
     
     @staticmethod
     def html_encode(text: str) -> str:
@@ -306,8 +316,8 @@ class DurpieBase:
         self.findings: List[Dict] = []
     
     def log(self, msg: str, level: str = "info"):
-        """Log message through mitmproxy context"""
-        if MITMPROXY_AVAILABLE:
+        """Log message through mitmproxy context or fallback to stdout."""
+        if MITMPROXY_AVAILABLE and ctx is not None:
             if level == "warn":
                 ctx.log.warn(f"[Durpie] {msg}")
             elif level == "error":
@@ -342,9 +352,9 @@ class DurpieBase:
             if isinstance(json_body, dict):
                 for key, value in json_body.items():
                     params[f"json:{key}"] = str(value)
-        except:
-            pass
-        
+        except Exception:
+            pass  # Not a JSON body or malformed JSON
+
         return params
 
 
@@ -400,16 +410,22 @@ class SQLiScanner(DurpieBase):
 
 class XSSScanner(DurpieBase):
     """XSS detection - checks if input is reflected"""
-    
+
+    MAX_PENDING_TESTS = 1000  # cap to avoid unbounded memory growth
+
     def __init__(self):
         super().__init__()
         self.pending_tests: Dict[str, Dict] = {}
-    
+
     def request(self, flow: http.HTTPFlow):
         """Track input values for reflection detection"""
         params = self.get_params(flow)
         for param_name, param_value in params.items():
             if len(param_value) > 3:  # Only track meaningful values
+                # Evict the oldest entry when the cap is reached
+                if len(self.pending_tests) >= self.MAX_PENDING_TESTS:
+                    oldest_key = next(iter(self.pending_tests))
+                    del self.pending_tests[oldest_key]
                 self.pending_tests[param_value] = {
                     'param': param_name,
                     'url': flow.request.pretty_url,
@@ -588,29 +604,36 @@ class CookieAudit(DurpieBase):
 
 class JWTAnalyzer(DurpieBase):
     """Analyze and detect JWT vulnerabilities"""
-    
+
     def __init__(self):
         super().__init__()
         self.seen_tokens = set()
-    
+        # Maps token -> url for expired tokens awaiting server response verification
+        self.pending_expired: Dict[str, str] = {}
+
     def decode_jwt(self, token: str) -> Optional[Dict]:
         """Decode JWT without verification"""
         try:
             parts = token.split('.')
             if len(parts) != 3:
                 return None
-            
-            header = json.loads(self.decoder.base64_decode(parts[0]))
-            payload = json.loads(self.decoder.base64_decode(parts[1]))
-            
+
+            header_str = self.decoder.base64_decode(parts[0])
+            payload_str = self.decoder.base64_decode(parts[1])
+            if not header_str or not payload_str:
+                return None
+
+            header = json.loads(header_str)
+            payload = json.loads(payload_str)
+
             return {
                 'header': header,
                 'payload': payload,
                 'signature': parts[2]
             }
-        except:
+        except Exception:
             return None
-    
+
     def request(self, flow: http.HTTPFlow):
         """Analyze JWTs in requests"""
         # Check Authorization header
@@ -618,32 +641,56 @@ class JWTAnalyzer(DurpieBase):
         if auth.startswith('Bearer '):
             token = auth.split(' ', 1)[1]
             self.analyze_token(token, flow.request.pretty_url)
-        
+
         # Check cookies
         for name, value in flow.request.cookies.items():
             if self.looks_like_jwt(value):
                 self.analyze_token(value, flow.request.pretty_url)
-    
+
+    def response(self, flow: http.HTTPFlow):
+        """Check if server accepted an expired JWT (verified via response code)."""
+        if not flow.response:
+            return
+
+        auth = flow.request.headers.get('Authorization', '')
+        if not auth.startswith('Bearer '):
+            return
+
+        token = auth.split(' ', 1)[1]
+        if token not in self.pending_expired:
+            return
+
+        # Server returned a success response with an expired JWT — it accepted it
+        if flow.response.status_code not in [401, 403]:
+            self.add_finding({
+                'type': 'Expired JWT Accepted',
+                'severity': 'MEDIUM',
+                'url': self.pending_expired[token],
+                'detail': f'Server returned HTTP {flow.response.status_code} for a request '
+                          f'containing an expired JWT — the server is not enforcing expiration.',
+            })
+        del self.pending_expired[token]
+
     def looks_like_jwt(self, value: str) -> bool:
         """Check if value looks like a JWT"""
         return bool(re.match(r'^eyJ[A-Za-z0-9-_]+\.eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$', value))
-    
+
     def analyze_token(self, token: str, url: str):
         """Analyze JWT for vulnerabilities"""
         if token in self.seen_tokens:
             return
         self.seen_tokens.add(token)
-        
+
         decoded = self.decode_jwt(token)
         if not decoded:
             return
-        
+
         header = decoded['header']
         payload = decoded['payload']
-        
+
         # Check algorithm
         alg = header.get('alg', '')
-        
+
         if alg.lower() == 'none':
             self.add_finding({
                 'type': 'JWT Algorithm None',
@@ -651,7 +698,7 @@ class JWTAnalyzer(DurpieBase):
                 'url': url,
                 'detail': 'JWT uses "none" algorithm - no signature verification',
             })
-        
+
         if alg == 'HS256':
             self.add_finding({
                 'type': 'JWT Weak Algorithm',
@@ -659,37 +706,33 @@ class JWTAnalyzer(DurpieBase):
                 'url': url,
                 'detail': 'JWT uses HS256 - susceptible to brute force if weak secret',
             })
-        
+
         # Check for sensitive data in payload
         sensitive_fields = ['password', 'secret', 'key', 'credit_card', 'ssn']
-        for field in sensitive_fields:
-            if field in str(payload).lower():
+        for field_name in sensitive_fields:
+            if field_name in str(payload).lower():
                 self.add_finding({
                     'type': 'Sensitive Data in JWT',
                     'severity': 'MEDIUM',
                     'url': url,
-                    'detail': f'JWT payload may contain sensitive field: {field}',
+                    'detail': f'JWT payload may contain sensitive field: {field_name}',
                 })
-        
-        # Check expiration
-        import time
+
+        # Check expiration — defer the "accepted" finding until the response
+        # is seen so we know the server actually accepted the expired token.
         exp = payload.get('exp')
-        if exp:
+        if exp is not None:
             if exp < time.time():
-                self.add_finding({
-                    'type': 'Expired JWT Accepted',
-                    'severity': 'MEDIUM',
-                    'url': url,
-                    'detail': 'Server accepted expired JWT token',
-                })
+                # Token is expired; record it and confirm acceptance in response()
+                self.pending_expired[token] = url
         else:
             self.add_finding({
                 'type': 'JWT Missing Expiration',
                 'severity': 'LOW',
                 'url': url,
-                'detail': 'JWT has no expiration claim',
+                'detail': 'JWT has no expiration claim (missing "exp")',
             })
-        
+
         self.log(f"JWT analyzed: alg={alg}, claims={list(payload.keys())}")
 
 
@@ -1021,21 +1064,27 @@ class DurpieSuite:
             self.tamperer,
         ]
     
+    def _log_error(self, msg: str):
+        if MITMPROXY_AVAILABLE and ctx is not None:
+            ctx.log.error(msg)
+        else:
+            logger.error(msg)
+
     def request(self, flow: http.HTTPFlow):
         for addon in self.addons:
             if hasattr(addon, 'request'):
                 try:
                     addon.request(flow)
                 except Exception as e:
-                    ctx.log.error(f"Addon error in request: {e}")
-    
+                    self._log_error(f"Addon error in request: {e}")
+
     def response(self, flow: http.HTTPFlow):
         for addon in self.addons:
             if hasattr(addon, 'response'):
                 try:
                     addon.response(flow)
                 except Exception as e:
-                    ctx.log.error(f"Addon error in response: {e}")
+                    self._log_error(f"Addon error in response: {e}")
     
     def get_all_findings(self) -> List[Dict]:
         """Collect findings from all scanners"""
@@ -1050,7 +1099,11 @@ class DurpieSuite:
         findings = self.get_all_findings()
         with open(filepath, 'w') as f:
             json.dump(findings, f, indent=2)
-        ctx.log.info(f"Exported {len(findings)} findings to {filepath}")
+        msg = f"Exported {len(findings)} findings to {filepath}"
+        if MITMPROXY_AVAILABLE and ctx is not None:
+            ctx.log.info(msg)
+        else:
+            print(f"[Durpie] {msg}")
     
     def print_summary(self):
         """Print findings summary"""
@@ -1112,8 +1165,22 @@ def start():
 def done():
     """Called when mitmproxy shuts down"""
     durpie.print_summary()
-    durpie.export_findings("durpie_findings.json")
-    flow_store.export_json("durpie_history.json")
+
+    # Resolve output directory from config.py if available
+    try:
+        from config import OUTPUT
+        output_dir = Path(OUTPUT.get("directory", "."))
+    except Exception:
+        output_dir = Path(".")
+
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.warning(f"Could not create output directory {output_dir}: {e}")
+        output_dir = Path(".")
+
+    durpie.export_findings(str(output_dir / "durpie_findings.json"))
+    flow_store.export_json(str(output_dir / "durpie_history.json"))
 
 
 # ============================================================

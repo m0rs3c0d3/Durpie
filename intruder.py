@@ -121,6 +121,8 @@ class Intruder:
         self.processors: List[Callable] = []
         self.concurrent = 10
         self.timeout = 30
+        self.delay = 0          # seconds between batches (rate limiting)
+        self.verify_ssl = True  # verify SSL certificates
         self.callback: Optional[Callable] = None
     
     def load_request_raw(self, raw: str):
@@ -211,7 +213,8 @@ class Intruder:
         url = self._build_url(position, payload)
         body = self._build_body(position, payload)
         headers = self.request.headers.copy()
-        
+
+        ssl_opt = None if self.verify_ssl else False
         start = datetime.now()
         try:
             async with session.request(
@@ -219,7 +222,7 @@ class Intruder:
                 headers=headers,
                 data=body if body else None,
                 timeout=aiohttp.ClientTimeout(total=self.timeout),
-                ssl=False
+                ssl=ssl_opt
             ) as resp:
                 text = await resp.text()
                 elapsed = (datetime.now() - start).total_seconds()
@@ -244,15 +247,16 @@ class Intruder:
         if not AIOHTTP_AVAILABLE:
             print("aiohttp required: pip install aiohttp")
             return []
-        
+
         self.results = []
-        conn = aiohttp.TCPConnector(limit=self.concurrent, ssl=False)
-        
+        ssl_opt = None if self.verify_ssl else False
+        conn = aiohttp.TCPConnector(limit=self.concurrent, ssl=ssl_opt)
+
         async with aiohttp.ClientSession(connector=conn) as session:
             for position in self.request.positions:
                 payloads = self.payloads.get(position, [])
                 tasks = [self._send(session, position, p) for p in payloads]
-                
+
                 for i in range(0, len(tasks), self.concurrent):
                     batch = tasks[i:i+self.concurrent]
                     results = await asyncio.gather(*batch)
@@ -260,18 +264,21 @@ class Intruder:
                         self.results.append(r)
                         if self.callback:
                             self.callback(r)
-        
+                    if self.delay > 0:
+                        await asyncio.sleep(self.delay)
+
         return self.results
     
     async def attack_battering_ram(self) -> List[IntruderResult]:
         """Same payload in all positions"""
         if not AIOHTTP_AVAILABLE:
             return []
-        
+
         self.results = []
         payloads = self.payloads.get(self.request.positions[0], [])
-        conn = aiohttp.TCPConnector(limit=self.concurrent, ssl=False)
-        
+        ssl_opt = None if self.verify_ssl else False
+        conn = aiohttp.TCPConnector(limit=self.concurrent, ssl=ssl_opt)
+
         async with aiohttp.ClientSession(connector=conn) as session:
             for payload in payloads:
                 tasks = [self._send(session, pos, payload) for pos in self.request.positions]
@@ -280,7 +287,9 @@ class Intruder:
                     self.results.append(r)
                     if self.callback:
                         self.callback(r)
-        
+                if self.delay > 0:
+                    await asyncio.sleep(self.delay)
+
         return self.results
     
     def analyze(self) -> Dict:
