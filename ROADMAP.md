@@ -187,54 +187,56 @@ Complexity: High
 
 ---
 
-## Phase 5: Advanced Attacks 🟡
+## Phase 5: Advanced Attacks ✅
 
-### 📋 Race Condition Framework
+> Implemented in `advanced_attacks.py` — load with `mitmdump -s advanced_attacks.py`
+
+### ✅ Race Condition Framework
 ```
 Priority: MEDIUM
 Complexity: High
 ```
-- [ ] Automatic candidate detection (financial, votes, coupons)
-- [ ] Parallel request generation
-- [ ] Timing analysis
-- [ ] Turbo intruder-style single-packet attack
-- [ ] Result comparison and anomaly detection
+- [x] Automatic candidate detection (financial, votes, coupons — 35 keyword heuristics)
+- [x] Parallel request generation (asyncio.gather burst, configurable concurrency)
+- [x] Timing analysis (mean/stddev, outlier detection)
+- [x] Turbo intruder-style single-packet attack (raw TCP last-byte sync via asyncio streams)
+- [x] Result comparison and anomaly detection (unique bodies, status code spread, timing stddev)
 
-### 📋 Business Logic Scanner
+### ✅ Business Logic Scanner
 ```
 Priority: MEDIUM
 Complexity: High
 ```
-- [ ] Price manipulation detection
-- [ ] Quantity manipulation
-- [ ] Workflow bypass (skip steps)
-- [ ] Negative value testing
-- [ ] Currency confusion
-- [ ] Coupon stacking
+- [x] Price manipulation detection (negative, zero, fractional, overflow values)
+- [x] Quantity manipulation (negative, zero, extreme values)
+- [x] Workflow bypass (step ordering tracked per session — out-of-order detection)
+- [x] Negative value testing (covered in price/quantity manipulation)
+- [x] Currency confusion (multi-currency parameter detection, USD/EUR/GBP switching)
+- [x] Coupon stacking (multiple coupon parameter detection)
 
-### 📋 File Upload Testing
+### ✅ File Upload Testing
 ```
 Priority: MEDIUM
 Complexity: Medium
 ```
-- [ ] Extension bypass (.php.jpg, .php%00.jpg)
-- [ ] Content-Type manipulation
-- [ ] Magic byte injection
-- [ ] SVG XSS
-- [ ] XXE via file upload
-- [ ] Path traversal in filename
-- [ ] Polyglot files
+- [x] Extension bypass (.php, .php3–7, .phtml, .phar, .php.jpg, .php%00.jpg, null-byte)
+- [x] Content-Type manipulation (image/jpeg for PHP uploads)
+- [x] Magic byte injection (GIF89a + PHP polyglot)
+- [x] SVG XSS (inline script in SVG payload)
+- [x] XXE via file upload (SVG with external entity to /etc/passwd)
+- [x] Path traversal in filename (../../../etc/passwd, Windows variants)
+- [x] Polyglot files (GIF+PHP, ASP/JSP extension variants)
 
-### 📋 Deserialization Scanner
+### ✅ Deserialization Scanner
 ```
 Priority: MEDIUM
 Complexity: High
 ```
-- [ ] Java serialization detection
-- [ ] PHP object injection
-- [ ] Python pickle detection
-- [ ] .NET deserialization
-- [ ] Gadget chain generation
+- [x] Java serialization detection (binary magic 0xACED0005 + Base64 rO0AB pattern)
+- [x] PHP object injection (O:N:"ClassName" regex pattern)
+- [x] Python pickle detection (binary opcode \x80\x02 / \x80\x04 / \x80\x05)
+- [x] .NET deserialization (BinaryFormatter AAEAAAD///// + ViewState pattern)
+- [x] Gadget chain generation (ysoserial/phpggc/pickle/dnspy DNS probe templates)
 
 ---
 
