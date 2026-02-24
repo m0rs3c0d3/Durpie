@@ -47,95 +47,100 @@ Security-focused roadmap organized by priority and complexity.
 
 ---
 
-## Phase 2: Active Scanning 🔴
+## Phase 2: Active Scanning ✅
 
-### 📋 Active SQLi Scanner
+> Implemented in `active_scanners.py` — load with `mitmdump -s active_scanners.py`
+> Standalone: `python active_scanners.py https://target.com/page?id=1`
+
+### ✅ Active SQLi Scanner
 ```
 Priority: CRITICAL
 Complexity: Medium
 ```
-- [ ] Parameter discovery (query, body, headers, cookies)
-- [ ] Automatic payload injection
-- [ ] Error-based detection
-- [ ] Boolean-based blind detection
-- [ ] Time-based blind detection
-- [ ] UNION column enumeration
-- [ ] Database fingerprinting (MySQL/PostgreSQL/MSSQL/SQLite)
-- [ ] Data extraction automation
+- [x] Parameter discovery (query, body, headers, cookies)
+- [x] Automatic payload injection
+- [x] Error-based detection (DB error pattern matching per MySQL/PostgreSQL/MSSQL/SQLite/Oracle)
+- [x] Boolean-based blind detection (TRUE vs FALSE response diff)
+- [x] Time-based blind detection (SLEEP/WAITFOR with baseline timing)
+- [x] UNION column enumeration (incremental NULL columns until no error)
+- [x] Database fingerprinting (error message signatures per DB engine)
+- [x] Data extraction automation (version(), user(), @@version extraction)
 
-### 📋 Active XSS Scanner
+### ✅ Active XSS Scanner
 ```
-Priority: CRITICAL  
+Priority: CRITICAL
 Complexity: Medium
 ```
-- [ ] Reflection point detection
-- [ ] Context detection (HTML/attribute/script/URL)
-- [ ] Payload selection based on context
-- [ ] Filter detection and bypass attempts
-- [ ] DOM XSS detection (requires headless browser)
-- [ ] Proof-of-concept generation
+- [x] Reflection point detection (canary-based)
+- [x] Context detection (HTML body / attribute / script / URL)
+- [x] Payload selection based on context
+- [x] Filter detection and bypass attempts (case variation, SVG, template literals, entities)
+- [ ] DOM XSS detection (requires headless browser — future Phase 5)
+- [x] Proof-of-concept generation (minimal HTML PoC page)
 
-### 📋 SSRF Exploitation
+### ✅ SSRF Exploitation
 ```
 Priority: HIGH
 Complexity: Medium
 ```
-- [ ] Automatic URL parameter detection
-- [ ] Internal port scanning
-- [ ] Cloud metadata extraction
-- [ ] Protocol smuggling (gopher, dict)
-- [ ] Blind SSRF via external callback (webhook integration)
+- [x] Automatic URL parameter detection (30+ parameter name heuristics)
+- [x] Internal port scanning (15 common ports via SSRF)
+- [x] Cloud metadata extraction (AWS, GCP, Azure, Alibaba, DigitalOcean)
+- [x] Protocol smuggling (gopher payload generator for Redis/SMTP; dict protocol)
+- [x] Blind SSRF via external callback (configurable callback_host)
 
 ---
 
-## Phase 3: Authentication & Session 🟠
+## Phase 3: Authentication & Session ✅
 
-### 📋 Session Analysis
+> Implemented in `auth_testing.py` — load with `mitmdump -s auth_testing.py`
+
+### ✅ Session Analysis
 ```
 Priority: HIGH
 Complexity: Medium
 ```
-- [ ] Session token entropy analysis
-- [ ] Session fixation detection
-- [ ] Session timeout testing
-- [ ] Concurrent session testing
-- [ ] Session invalidation on logout
-- [ ] Session invalidation on password change
+- [x] Session token entropy analysis (Shannon entropy + charset heuristics)
+- [x] Session fixation detection (pre/post-login session ID comparison)
+- [ ] Session timeout testing (manual — requires waiting)
+- [ ] Concurrent session testing (manual — requires two browsers)
+- [x] Session invalidation on logout (detects missing Max-Age=0 on logout)
+- [ ] Session invalidation on password change (future: track change flows)
 
-### 📋 OAuth/OIDC Testing
+### ✅ OAuth/OIDC Testing
 ```
 Priority: HIGH
 Complexity: High
 ```
-- [ ] Redirect URI validation testing
-- [ ] State parameter validation
-- [ ] PKCE implementation check
-- [ ] Token leakage detection
-- [ ] Scope escalation testing
-- [ ] IdP confusion attacks
+- [x] Redirect URI validation testing (8 bypass payload variants)
+- [x] State parameter validation (presence + entropy check)
+- [x] PKCE implementation check (code_challenge presence)
+- [x] Token leakage detection (URL query params, fragments, response body)
+- [x] Scope escalation testing (dangerous scope detection)
+- [ ] IdP confusion attacks (future: multi-IdP issuer validation)
 
-### 📋 JWT Deep Analysis
+### ✅ JWT Deep Analysis
 ```
 Priority: HIGH
 Complexity: Medium
 ```
-- [ ] Algorithm confusion attacks (RS256→HS256)
-- [ ] Key brute forcing (common secrets)
-- [ ] JWK injection
-- [ ] Kid parameter attacks
-- [ ] Claim manipulation testing
-- [ ] Token expiration bypass
+- [x] Algorithm confusion attacks (RS256→HS256 using public key as HMAC secret)
+- [x] Key brute forcing (35+ common secrets wordlist)
+- [x] JWK injection (attacker-controlled key embedded in header)
+- [x] Kid parameter attacks (SQL injection + path traversal variants)
+- [x] Claim manipulation testing (role/admin/scope privilege escalation advisory)
+- [x] Token expiration bypass (forged tokens + expired-but-accepted detection)
 
-### 📋 MFA Testing
+### ✅ MFA Testing
 ```
 Priority: MEDIUM
 Complexity: Medium
 ```
-- [ ] Backup code brute force
-- [ ] OTP bypass techniques
-- [ ] MFA fatigue simulation
-- [ ] Device trust manipulation
-- [ ] Recovery flow testing
+- [ ] Backup code brute force (advisory — entropy analysis implemented)
+- [x] OTP bypass techniques (client-side bypass via response manipulation)
+- [x] MFA fatigue simulation (push notification endpoint detection)
+- [ ] Device trust manipulation (future)
+- [x] Recovery flow testing (step-skip detection, rate limit detection)
 
 ---
 
