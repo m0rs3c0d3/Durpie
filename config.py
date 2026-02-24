@@ -80,15 +80,79 @@ SCANNER = {
         "idor": True,
         "ssrf": True,
     },
-    
+
     # Active scanning (injects payloads - more intrusive)
+    # Loads active_scanners.py Phase 2 modules when True
     "active_scanning": False,
-    
-    # Rate limiting (requests per second, 0 = unlimited)
-    "rate_limit": 0,
-    
+
+    # Rate limiting for active scanning (seconds between requests, 0 = unlimited)
+    # Recommended: 0.2 to avoid hammering the target
+    "rate_limit": 0.2,
+
     # Skip testing static files
     "skip_static": True,
+}
+
+
+# ============================================================
+# ACTIVE SCANNING SETTINGS (Phase 2)
+# ============================================================
+
+ACTIVE_SCAN = {
+    # --- SQL Injection ---
+    "sqli": {
+        # Enable specific SQLi detection techniques
+        "error_based": True,
+        "boolean_based": True,
+        "time_based": True,       # Slowest; causes intentional delays in responses
+        "union_based": True,
+
+        # Maximum parameters to test per endpoint (caps request count)
+        "max_params": 20,
+
+        # Seconds to SLEEP() for time-based detection
+        # Must be long enough to distinguish from network jitter
+        "time_delay": 5,
+    },
+
+    # --- XSS ---
+    "xss": {
+        # Test context-specific payloads (HTML / attribute / script / URL)
+        "context_detection": True,
+
+        # Try filter bypass payloads when basic payloads are blocked
+        "filter_bypass": True,
+
+        # Generate PoC HTML page for confirmed findings
+        "generate_poc": True,
+    },
+
+    # --- SSRF ---
+    "ssrf": {
+        # Test localhost and internal IP bypass variants
+        "test_localhost": True,
+
+        # Test cloud provider metadata endpoints (AWS, GCP, Azure, Alibaba, DO)
+        "test_cloud_metadata": True,
+
+        # Port scan 127.0.0.1 via SSRF (only runs if SSRF is confirmed)
+        "test_port_scan": True,
+
+        # External callback host for blind SSRF detection.
+        # Use Burp Collaborator, interact.sh, or your own server.
+        # Leave empty to skip blind SSRF tests.
+        # Example: "abc123.oastify.com"
+        "callback_host": "",
+    },
+
+    # --- Output ---
+    "output": {
+        # Save active scan findings to a timestamped JSON file on shutdown
+        "save_findings": True,
+
+        # Directory for output files (created if it doesn't exist)
+        "output_dir": "./durpie_output",
+    },
 }
 
 # ============================================================
@@ -184,6 +248,20 @@ def get_auth_headers() -> dict:
 # ============================================================
 
 if __name__ == "__main__":
+    active_techs = []
+    if ACTIVE_SCAN["sqli"]["error_based"]:
+        active_techs.append("SQLi(error)")
+    if ACTIVE_SCAN["sqli"]["boolean_based"]:
+        active_techs.append("SQLi(boolean)")
+    if ACTIVE_SCAN["sqli"]["time_based"]:
+        active_techs.append("SQLi(time)")
+    if ACTIVE_SCAN["sqli"]["union_based"]:
+        active_techs.append("SQLi(union)")
+    if ACTIVE_SCAN["xss"]["context_detection"]:
+        active_techs.append("XSS")
+    if ACTIVE_SCAN["ssrf"]["test_localhost"]:
+        active_techs.append("SSRF")
+
     print(f"""
 Durpie Configuration
 ====================
@@ -192,8 +270,15 @@ Target: {TARGET['domain']}
 Subdomains: {TARGET['include_subdomains']}
 Additional: {TARGET['additional_domains']}
 
-Scanners enabled:
+Passive Scanners enabled:
 {chr(10).join(f"  - {k}: {v}" for k, v in SCANNER['enabled'].items())}
 
 Active scanning: {SCANNER['active_scanning']}
+Active techniques: {', '.join(active_techs) if active_techs else 'none'}
+Rate limit: {SCANNER['rate_limit']}s between requests
+SSRF callback: {ACTIVE_SCAN['ssrf']['callback_host'] or '(not configured)'}
+
+To run active scanners:
+  mitmdump -s active_scanners.py
+  python active_scanners.py https://target.com/page?id=1
 """)
